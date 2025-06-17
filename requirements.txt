@@ -1,0 +1,18 @@
+# Core requirements
+pyttsx3==2.90
+SpeechRecognition==3.8.1
+PyAutoGUI==0.9.53
+pywhatkit==5.1
+pyjokes==0.6.0
+psutil==5.9.0
+python-dateutil==2.8.2  # For dateutil.parser
+ics==0.7.2
+urllib3==1.26.12
+
+# Google Calendar API integration (optional)
+google-api-python-client==2.70.0
+google-auth-oauthlib==0.5.2
+google-auth==2.11.0
+
+# Development tools (recommended)
+python-dotenv==0.21.0  # For environment variables

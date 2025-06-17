@@ -1,0 +1,233 @@
+"""
+Cypher Voice Assistant - Silent Listening with Full Functionality
+"""
+
+import re
+import time
+import random
+import datetime
+import webbrowser
+import psutil
+from typing import Optional
+import pyttsx3
+import pyautogui
+import pywhatkit
+import pyjokes
+import speech_recognition as sr
+from ics import Calendar, Event
+import urllib.parse
+from dateutil import parser
+
+class VoiceEngine:
+    """Handles text-to-speech output."""
+
+    def __init__(self):
+        self.engine = pyttsx3.init()
+        self.engine.setProperty('rate', 180)
+        self.engine.setProperty('voice', self.engine.getProperty('voices')[0].id)
+
+    def speak(self, text: str) -> None:
+        try:
+            print(f"CYPHER: {text}")
+            self.engine.say(text)
+            self.engine.runAndWait()
+        except Exception as e:
+            print(f"[TTS ERROR]: {e}")
+
+
+class CommandRecognizer:
+    """Handles continuous silent speech recognition."""
+
+    def __init__(self, voice_engine: Optional[VoiceEngine] = None):
+        self.recognizer = sr.Recognizer()
+        self.voice = voice_engine
+
+    def listen(self) -> Optional[str]:
+        with sr.Microphone() as source:
+            self.recognizer.adjust_for_ambient_noise(source)
+            try:
+                audio = self.recognizer.listen(source, timeout=None)
+                command = self.recognizer.recognize_google(audio).lower()
+                print(f"Detected command: {command}")
+                return command
+            except sr.UnknownValueError:
+                return None
+            except sr.RequestError:
+                if self.voice:
+                    self.voice.speak("Network issue, please check your connection.")
+                return None
+            except Exception as e:
+                print(f"[Listening Error]: {e}")
+                return None
+
+
+class CypherAssistant:
+    """Main voice assistant class."""
+
+    def __init__(self):
+        self.voice = VoiceEngine()
+        self.recognizer = CommandRecognizer(voice_engine=self.voice)
+        self.websites = {
+            "google": "https://www.google.com",
+            "youtube": "https://www.youtube.com",
+            "github": "https://www.github.com",
+            "chrome": "https://www.google.com"
+        }
+        self.calendar_file = "calendar.ics"
+        self.voice.speak("Hello iam Cypher how can I help you today..")
+
+    def _open_website(self, site: str) -> None:
+        if site in self.websites:
+            webbrowser.open(self.websites[site])
+            self.voice.speak(f"Opening {site}")
+        else:
+            self.voice.speak(f"Opening {site} in browser")
+            webbrowser.open(f"https://{site}")
+
+    def _web_search(self, query: str) -> None:
+        pywhatkit.search(query)
+        self.voice.speak(f"Searching for {query}")
+
+    def _play_youtube(self, song: str) -> None:
+        pywhatkit.playonyt(song)
+        self.voice.speak(f"Playing {song}")
+
+    def _tell_time(self) -> None:
+        now = datetime.datetime.now().strftime("%I:%M %p")
+        self.voice.speak(f"The time is {now}")
+
+    def _tell_date(self) -> None:
+        today = datetime.datetime.now().strftime("%A, %B %d, %Y")
+        self.voice.speak(f"Today is {today}")
+
+    def _tell_joke(self) -> None:
+        self.voice.speak(pyjokes.get_joke())
+
+    def _take_note(self, text: str) -> None:
+        clean = re.sub(r"(note|remember)", "", text, flags=re.IGNORECASE).strip()
+        with open("notes.txt", "a") as f:
+            f.write(f"[{datetime.datetime.now()}] {clean}\n")
+        self.voice.speak("Note saved")
+
+    def _system_stats(self) -> None:
+        cpu = psutil.cpu_percent()
+        mem = psutil.virtual_memory().percent
+        self.voice.speak(f"CPU is at {cpu} percent and RAM usage is at {mem} percent")
+
+    def _add_calendar_event(self, command: str) -> None:
+        try:
+            self.voice.speak("What's the title of the event?")
+            title = self.recognizer.listen() or "Untitled Event"
+
+            self.voice.speak("What is the location?")
+            location = self.recognizer.listen() or "Virtual"
+
+            self.voice.speak("When should it start? (e.g. 18 June 5 PM)")
+            start_input = self.recognizer.listen()
+            if not start_input:
+                self.voice.speak("I couldn't get the start time.")
+                return
+
+            self.voice.speak("When should it end?")
+            end_input = self.recognizer.listen()
+            if not end_input:
+                self.voice.speak("I couldn't get the end time.")
+                return
+
+            start_dt = parser.parse(start_input, fuzzy=True)
+            end_dt = parser.parse(end_input, fuzzy=True)
+            now = datetime.datetime.now()
+
+            if start_dt.year == 1900:
+                start_dt = start_dt.replace(year=now.year)
+            if end_dt.year == 1900:
+                end_dt = end_dt.replace(year=now.year)
+
+            c = Calendar()
+            e = Event()
+            e.name = title
+            e.begin = start_dt
+            e.end = end_dt
+            e.location = location
+            c.events.add(e)
+
+            with open(self.calendar_file, "a") as f:
+                f.write(str(c))
+
+            self.voice.speak(f"Event '{title}' added to calendar.")
+
+            """def format_dt_google(dt):
+                return dt.strftime("%Y%m%dT%H%M%S")
+
+            start_str = format_dt_google(start_dt)
+            end_str = format_dt_google(end_dt)
+
+            gcal_url = (
+                "https://calendar.google.com/calendar/render?action=TEMPLATE"
+                f"&text={urllib.parse.quote(title)}"
+                f"&dates={start_str}/{end_str}"
+                f"&details={urllib.parse.quote('Created with Cypher Assistant')}"
+                f"&location={urllib.parse.quote(location)}"
+            )
+
+            self.voice.speak("Do you want to add it to Google Calendar too?")
+            self.voice.speak("Please say yes or no.")
+            response = self.recognizer.listen()
+
+            if response and any(word in response.lower() for word in ["yes", "sure", "okay", "confirm"]):
+                webbrowser.open(gcal_url)
+                self.voice.speak("Opening Google Calendar.")
+            else:
+                self.voice.speak("Okay, not adding to Google Calendar.")"""
+
+        except Exception as e:
+            print(f"[Calendar Error]: {e}")
+            self.voice.speak("Something went wrong while creating the event.")
+
+    def handle_command(self, command: str) -> bool:
+        if not command:
+            return True
+
+        command = command.strip()
+
+        if any(word in command for word in ["exit", "stop", "bye"]):
+            self.voice.speak("Goodbye")
+            return False
+        elif any(word in command for word in ["time", "clock"]):
+            self._tell_time()
+        elif any(word in command for word in ["date", "today"]):
+            self._tell_date()
+        elif any(word in command for word in ["joke", "make me laugh"]):
+            self._tell_joke()
+        elif any(word in command for word in ["note", "remember"]):
+            self._take_note(command)
+        elif any(word in command for word in ["event", "meeting", "appointment"]):
+            self._add_calendar_event(command)
+        elif any(word in command for word in ["stats", "performance"]):
+            self._system_stats()
+        elif "search" in command:
+            self._web_search(command.replace("search", "").strip())
+        elif "play" in command:
+            song = re.sub(r"play\s*(me)?", "", command, flags=re.IGNORECASE).strip()
+            self._play_youtube(song)
+        elif "open" in command:
+            self._open_website(command.replace("open", "").strip())
+        else:
+            self._web_search(command)
+
+        return True
+
+
+def main():
+    assistant = CypherAssistant()
+    try:
+        while True:
+            command = assistant.recognizer.listen()
+            if command and not assistant.handle_command(command):
+                break
+    except KeyboardInterrupt:
+        assistant.voice.speak("Interrupted. Goodbye.")
+
+
+if __name__ == "__main__":
+    main()
