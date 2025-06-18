@@ -1,0 +1,27 @@
+# Cypher Voice Assistant
+
+## Overview
+Cypher is a voice assistant designed for silent listening with full functionality. It can perform tasks such as web searches, playing YouTube videos, telling jokes, managing notes, checking system stats, and adding calendar events.
+
+## Features
+- **Silent Listening**: Continuously listens for commands without requiring activation phrases.
+- **Web Search**: Search the web using voice commands.
+- **YouTube Playback**: Play songs or videos directly on YouTube.
+- **Time and Date**: Provides the current time and date.
+- **Jokes**: Tells jokes to lighten the mood.
+- **Notes**: Save notes for later reference.
+- **System Stats**: Displays CPU and RAM usage.
+- **Calendar Events**: Add events to a local `.ics` calendar file.
+
+## Installation
+
+### Prerequisites
+- Python 3.8 or higher
+- A working microphone
+
+### Steps
+1. Clone the repository or download the source code.
+2. Install the required dependencies using `pip`:
+    ```bash
+    pip install -r requirements.txt
+    ```
